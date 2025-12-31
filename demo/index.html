@@ -410,8 +410,37 @@ body {
 </div>
 
 <!-- 引入高德地图API - 重要：请先到高德开放平台申请API密钥，并替换URL中的"您的高德API密钥" -->
-<script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=您的高德API密钥"></script>
+ <script
+  type="text/javascript"
+  src="https://webapi.amap.com/maps?v=2.0&key=f6c37e8558c3566040b4adb1cfcf6b7f"
+></script>
 <script src="../dist/wind-gl.js"></script>
+<script type="text/javascript">
+    window._AMapSecurityConfig = {
+        securityJsCode: 'e79fdfeb8f3900bed9104231dbf608e6',
+    };
+
+    // 初始化高德地图
+    let amap;
+    function initAmap() {
+        // 初始化地图
+        amap = new AMap.Map('amap-container', {
+            zoom: 4, // 设置地图缩放级别
+            center: [116.397428, 39.90923], // 设置地图中心点
+            features: ['bg', 'point', 'road'], // 显示背景、标注、道路
+            viewMode: '3D', // 是否开启3D视图
+        });
+        var satelliteLayer = new AMap.TileLayer.Satellite();
+        satelliteLayer.setMap(amap); // 显示卫星图层
+    }
+
+    // 初始化地图
+    if (typeof AMap !== 'undefined') {
+        initAmap();
+    } else {
+        console.error('高德地图API未加载');
+    }
+</script>
 <script src="index.js"></script>
 <script src="../data-panel.js"></script>
 </body>

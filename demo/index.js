@@ -13,26 +13,6 @@ gl.clearColor(0.0, 0.0, 0.0, 0.0); // 设置为透明背景
 const wind = window.wind = new WindGL(gl);
 wind.numParticles = 65536;
 
-// 初始化高德地图
-let amap;
-function initAmap() {
-    // 初始化地图
-    amap = new AMap.Map('amap-container', {
-        zoom: 4, // 设置地图缩放级别
-        center: [116.397428, 39.90923], // 设置地图中心点
-        mapStyle: 'amap://styles/satellite', // 设置为卫星地图
-        features: ['bg', 'point', 'road'], // 显示背景、标注、道路
-        viewMode: '3D', // 是否开启3D视图
-    });
-}
-
-// 初始化地图
-if (typeof AMap !== 'undefined') {
-    initAmap();
-} else {
-    console.error('高德地图API未加载');
-}
-
 function frame() {
     if (wind.windData) {
         wind.draw();
@@ -88,7 +68,7 @@ function updateRetina() {
 //         for (let j = 0; j < line.length; j++) {
 //             const lon = line[j][0];
 //             const lat = line[j][1];
-            
+
 //             // 只绘制在目标区域内的海岸线
 //             if (lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax) {
 //                 ctx[j ? 'lineTo' : 'moveTo'](
@@ -109,7 +89,7 @@ function updateWind(name) {
             windImage.onload = function () {
                 wind.setWind(windData);
             };
-            windImage.onerror = function() {
+            windImage.onerror = function () {
                 console.error('PNG图像加载失败:', windImage.src);
             };
         } else {
@@ -122,7 +102,7 @@ function updateWindData(dataInfo) {
     // 确保路径以'/'开头以适应绝对路径
     const jsonPath = dataInfo.path.startsWith('/') ? dataInfo.path : '/' + dataInfo.path;
     const pngPath = dataInfo.path.startsWith('/') ? dataInfo.path : '/' + dataInfo.path;
-    
+
     getJSON(jsonPath + '.json', function (windData) {
         if (windData) {
             const windImage = new Image();
@@ -132,7 +112,7 @@ function updateWindData(dataInfo) {
                 wind.setWind(windData);
                 console.log('风场数据更新成功:', dataInfo.name);
             };
-            windImage.onerror = function() {
+            windImage.onerror = function () {
                 console.error('PNG图像加载失败:', windImage.src);
             };
         } else {
@@ -153,7 +133,7 @@ function getJSON(url, callback) {
             callback(null); // 不抛出异常，而是传递null
         }
     };
-    xhr.onerror = function() {
+    xhr.onerror = function () {
         console.error('网络请求失败:', url);
         callback(null);
     };
