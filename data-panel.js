@@ -517,3 +517,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 1000);
 });
+
+// 监听窗口大小变化事件，确保缩放后风场图层与地图同步
+// window.addEventListener('resize', () => {
+//     // 确保画布尺寸与容器保持同步
+//     if (window.wind && typeof updateRetina === 'function') {
+//         updateRetina();
+//     }
+// });

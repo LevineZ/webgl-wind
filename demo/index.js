@@ -1,4 +1,4 @@
-// using var to work around a WebKit bug
+// using var to work around a WebGL bug
 var canvas = document.getElementById('canvas'); // eslint-disable-line
 
 const pxRatio = Math.max(Math.floor(window.devicePixelRatio) || 1, 2);
@@ -12,6 +12,75 @@ gl.clearColor(0.0, 0.0, 0.0, 0.0); // 设置为透明背景
 
 const wind = window.wind = new WindGL(gl);
 wind.numParticles = 65536;
+window._AMapSecurityConfig = {
+    securityJsCode: 'e79fdfeb8f3900bed9104231dbf608e6',
+};
+
+// 初始化高德地图
+let amap;
+
+function initAmap() {
+    // 初始化地图
+    amap = new AMap.Map('amap-container', {
+        zoom: 4, // 设置地图缩放级别
+        center: [116.397428, 39.90923], // 设置地图中心点
+        features: ['bg', 'point', 'road'], // 显示背景、标注、道路
+        viewMode: '3D', // 是否开启3D视图
+        zooms: [3, 18] // 设置缩放级别范围
+    });
+
+    const satelliteLayer = new AMap.TileLayer.Satellite();
+    satelliteLayer.setMap(amap); // 显示卫星图层
+
+    // 获取缩放按钮元素（确保DOM已加载）
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+
+    if (zoomInBtn && zoomOutBtn) {
+        // 添加缩放事件监听器
+        zoomInBtn.addEventListener('click', () => {
+            amap.zoomIn(); // 高德地图放大
+        });
+
+        zoomOutBtn.addEventListener('click', () => {
+            amap.zoomOut(); // 高德地图缩小
+        });
+    } else {
+        console.error('缩放按钮元素未找到，请检查HTML中是否存在对应ID的元素');
+    }
+
+    // 监听地图缩放事件，同步调整风场canvas
+    amap.on('zoomchange', () => {
+        // 地图缩放时，调整canvas大小以匹配地图
+        updateCanvasSize();
+    });
+
+    // 监听地图移动事件，同步风场canvas
+    amap.on('moveend', () => {
+        // 地图缩放时，调整canvas大小以匹配地图
+        updateCanvasSize();
+    });
+}
+
+// 更新canvas大小以匹配地图容器
+function updateCanvasSize() {
+    const canvas = document.getElementById('canvas');
+    if (canvas) {
+        canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+        canvas.height = canvas.clientHeight * (window.devicePixelRatio || 1);
+
+        if (window.wind) {
+            window.wind.resize();
+        }
+    }
+}
+
+// 初始化地图
+if (typeof AMap !== 'undefined') {
+    initAmap();
+} else {
+    console.error('高德地图API未加载');
+}
 
 function frame() {
     if (wind.windData) {
@@ -47,39 +116,6 @@ function updateRetina() {
     canvas.height = canvas.clientHeight * ratio;
     wind.resize();
 }
-
-// getJSON('https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_coastline.geojson', function (data) {
-//     const canvas = document.getElementById('coastline');
-//     canvas.width = canvas.clientWidth * pxRatio;
-//     canvas.height = canvas.clientHeight * pxRatio;
-
-//     const ctx = canvas.getContext('2d');
-//     ctx.lineWidth = pxRatio;
-//     ctx.lineJoin = ctx.lineCap = 'round';
-//     ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // 设置为半透明白色，与地图背景更协调
-//     ctx.beginPath();
-
-//     // 中国东南沿海区域边界
-//     const lonMin = 104, lonMax = 126;
-//     const latMin = 14, latMax = 31;
-
-//     for (let i = 0; i < data.features.length; i++) {
-//         const line = data.features[i].geometry.coordinates;
-//         for (let j = 0; j < line.length; j++) {
-//             const lon = line[j][0];
-//             const lat = line[j][1];
-
-//             // 只绘制在目标区域内的海岸线
-//             if (lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax) {
-//                 ctx[j ? 'lineTo' : 'moveTo'](
-//                     (lon - lonMin) * canvas.width / (lonMax - lonMin),
-//                     (latMax - lat) * canvas.height / (latMax - latMin));
-//             }
-//         }
-//     }
-//     ctx.stroke();
-// });
-
 function updateWind(name) {
     getJSON('/data/wind_data/wrf_data/' + windFiles[name] + '.json', function (windData) {
         if (windData) {

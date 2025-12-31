@@ -323,6 +323,42 @@ body {
     margin-top: 5px;
 }
 
+/* 缩放控制按钮样式 */
+.zoom-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.zoom-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    background: rgba(45, 45, 45, 0.8);
+    border: 1px solid #444;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.zoom-btn:hover {
+    background: rgba(76, 175, 80, 0.8);
+    transform: scale(1.1);
+}
+
+.zoom-btn:active {
+    transform: scale(0.95);
+}
+
 @media (max-width: 768px) {
     .sidebar {
         width: 280px;
@@ -403,6 +439,10 @@ body {
     </div>
 
     <div class="main-content">
+        <div class="zoom-controls">
+            <button class="zoom-btn" id="zoomInBtn">+</button>
+            <button class="zoom-btn" id="zoomOutBtn">-</button>
+        </div>
         <div id="amap-container"></div>
         <!-- <canvas id="coastline"></canvas> -->
         <canvas id="canvas"></canvas>
@@ -415,32 +455,6 @@ body {
   src="https://webapi.amap.com/maps?v=2.0&key=f6c37e8558c3566040b4adb1cfcf6b7f"
 ></script>
 <script src="../dist/wind-gl.js"></script>
-<script type="text/javascript">
-    window._AMapSecurityConfig = {
-        securityJsCode: 'e79fdfeb8f3900bed9104231dbf608e6',
-    };
-
-    // 初始化高德地图
-    let amap;
-    function initAmap() {
-        // 初始化地图
-        amap = new AMap.Map('amap-container', {
-            zoom: 4, // 设置地图缩放级别
-            center: [116.397428, 39.90923], // 设置地图中心点
-            features: ['bg', 'point', 'road'], // 显示背景、标注、道路
-            viewMode: '3D', // 是否开启3D视图
-        });
-        var satelliteLayer = new AMap.TileLayer.Satellite();
-        satelliteLayer.setMap(amap); // 显示卫星图层
-    }
-
-    // 初始化地图
-    if (typeof AMap !== 'undefined') {
-        initAmap();
-    } else {
-        console.error('高德地图API未加载');
-    }
-</script>
 <script src="index.js"></script>
 <script src="../data-panel.js"></script>
 </body>
