@@ -26,7 +26,11 @@ function initAmap() {
         center: [116.397428, 39.90923], // 设置地图中心点
         features: ['bg', 'point', 'road'], // 显示背景、标注、道路
         viewMode: '3D', // 是否开启3D视图
-        zooms: [3, 18] // 设置缩放级别范围
+        zooms: [3, 18], // 设置缩放级别范围
+        dragEnable: true, // 启用拖拽
+        doubleClickZoom: true, // 启用双击放大
+        keyboardEnable: true, // 启用键盘操作
+        scrollWheel: true // 启用滚轮缩放
     });
 
     const satelliteLayer = new AMap.TileLayer.Satellite();
@@ -57,7 +61,13 @@ function initAmap() {
 
     // 监听地图移动事件，同步风场canvas
     amap.on('moveend', () => {
-        // 地图缩放时，调整canvas大小以匹配地图
+        // 地图移动结束时，调整canvas大小以匹配地图
+        updateCanvasSize();
+    });
+
+    // 监听地图拖拽事件，同步风场canvas
+    amap.on('dragend', () => {
+        // 地图拖拽结束时，调整canvas大小以匹配地图
         updateCanvasSize();
     });
 }
@@ -81,6 +91,98 @@ if (typeof AMap !== 'undefined') {
 } else {
     console.error('高德地图API未加载');
 }
+
+// 添加风场canvas的拖拽功能，通过监听canvas上的鼠标事件来控制地图移动
+let isDragging = false;
+let lastMouseX = null;
+let lastMouseY = null;
+
+// 鼠标按下事件
+function handleMouseDown(e) {
+    isDragging = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    canvas.style.cursor = 'grabbing';
+}
+
+// 鼠标移动事件
+function handleMouseMove(e) {
+    if (!isDragging || !amap) return;
+
+    const deltaX = e.clientX - lastMouseX;
+    const deltaY = e.clientY - lastMouseY;
+
+    // 使用高德地图的panBy方法移动地图 - 反向移动以实现正确的拖拽效果
+    amap.panBy(deltaX, deltaY);
+
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+}
+
+// 鼠标释放事件
+function handleMouseUp() {
+    isDragging = false;
+    canvas.style.cursor = 'default';
+}
+
+// 绑定鼠标事件到canvas
+canvas.addEventListener('mousedown', handleMouseDown);
+canvas.addEventListener('mousemove', handleMouseMove);
+window.addEventListener('mouseup', handleMouseUp);
+
+// 添加滚轮事件监听器，用于缩放
+canvas.addEventListener('wheel', function (e) {
+    e.preventDefault(); // 阻止默认的滚轮行为
+
+    // 根据滚轮方向进行缩放
+    if (e.deltaY < 0) {
+        // 向上滚动，放大
+        amap.zoomIn();
+    } else {
+        // 向下滚动，缩小
+        amap.zoomOut();
+    }
+});
+
+// 同时也支持触摸事件（移动端）
+function handleTouchStart(e) {
+    if (e.touches.length === 1) {
+        isDragging = true;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+        e.preventDefault();
+    }
+}
+
+function handleTouchMove(e) {
+    if (!isDragging || !amap || e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - lastMouseX;
+    const deltaY = touch.clientY - lastMouseY;
+
+    // 反向移动以实现正确的拖拽效果
+    amap.panBy(deltaX, deltaY);
+
+    lastMouseX = touch.clientX;
+    lastMouseY = touch.clientY;
+
+    e.preventDefault();
+}
+
+function handleTouchEnd() {
+    isDragging = false;
+}
+
+canvas.addEventListener('touchstart', handleTouchStart);
+canvas.addEventListener('touchmove', handleTouchMove);
+canvas.addEventListener('touchend', handleTouchEnd);
+
+// 防止在canvas上进行默认的拖拽行为
+canvas.addEventListener('dragstart', function (e) {
+    e.preventDefault();
+    return false;
+});
 
 function frame() {
     if (wind.windData) {

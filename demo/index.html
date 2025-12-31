@@ -359,6 +359,29 @@ body {
     transform: scale(0.95);
 }
 
+/* 操作提示样式 */
+.operation-hint {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.operation-hint p {
+    margin: 5px 0;
+}
+
+.operation-hint span {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         width: 280px;
@@ -446,6 +469,11 @@ body {
         <div id="amap-container"></div>
         <!-- <canvas id="coastline"></canvas> -->
         <canvas id="canvas"></canvas>
+        
+        <div class="operation-hint">
+            <p>使用 <span>鼠标拖拽</span> 来移动地图</p>
+            <p>使用 <span>缩放按钮</span> 或 <span>滚轮</span> 来缩放地图</p>
+        </div>
     </div>
 </div>
 
