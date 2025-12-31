@@ -7,8 +7,31 @@ canvas.height = canvas.clientHeight;
 
 const gl = canvas.getContext('webgl', {antialiasing: false});
 
+// 设置WebGL上下文的背景为透明
+gl.clearColor(0.0, 0.0, 0.0, 0.0); // 设置为透明背景
+
 const wind = window.wind = new WindGL(gl);
 wind.numParticles = 65536;
+
+// 初始化高德地图
+let amap;
+function initAmap() {
+    // 初始化地图
+    amap = new AMap.Map('amap-container', {
+        zoom: 4, // 设置地图缩放级别
+        center: [116.397428, 39.90923], // 设置地图中心点
+        mapStyle: 'amap://styles/satellite', // 设置为卫星地图
+        features: ['bg', 'point', 'road'], // 显示背景、标注、道路
+        viewMode: '3D', // 是否开启3D视图
+    });
+}
+
+// 初始化地图
+if (typeof AMap !== 'undefined') {
+    initAmap();
+} else {
+    console.error('高德地图API未加载');
+}
 
 function frame() {
     if (wind.windData) {
@@ -45,37 +68,37 @@ function updateRetina() {
     wind.resize();
 }
 
-getJSON('https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_coastline.geojson', function (data) {
-    const canvas = document.getElementById('coastline');
-    canvas.width = canvas.clientWidth * pxRatio;
-    canvas.height = canvas.clientHeight * pxRatio;
+// getJSON('https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_coastline.geojson', function (data) {
+//     const canvas = document.getElementById('coastline');
+//     canvas.width = canvas.clientWidth * pxRatio;
+//     canvas.height = canvas.clientHeight * pxRatio;
 
-    const ctx = canvas.getContext('2d');
-    ctx.lineWidth = pxRatio;
-    ctx.lineJoin = ctx.lineCap = 'round';
-    ctx.strokeStyle = 'white';
-    ctx.beginPath();
+//     const ctx = canvas.getContext('2d');
+//     ctx.lineWidth = pxRatio;
+//     ctx.lineJoin = ctx.lineCap = 'round';
+//     ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; // 设置为半透明白色，与地图背景更协调
+//     ctx.beginPath();
 
-    // 中国东南沿海区域边界
-    const lonMin = 104, lonMax = 126;
-    const latMin = 14, latMax = 31;
+//     // 中国东南沿海区域边界
+//     const lonMin = 104, lonMax = 126;
+//     const latMin = 14, latMax = 31;
 
-    for (let i = 0; i < data.features.length; i++) {
-        const line = data.features[i].geometry.coordinates;
-        for (let j = 0; j < line.length; j++) {
-            const lon = line[j][0];
-            const lat = line[j][1];
+//     for (let i = 0; i < data.features.length; i++) {
+//         const line = data.features[i].geometry.coordinates;
+//         for (let j = 0; j < line.length; j++) {
+//             const lon = line[j][0];
+//             const lat = line[j][1];
             
-            // 只绘制在目标区域内的海岸线
-            if (lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax) {
-                ctx[j ? 'lineTo' : 'moveTo'](
-                    (lon - lonMin) * canvas.width / (lonMax - lonMin),
-                    (latMax - lat) * canvas.height / (latMax - latMin));
-            }
-        }
-    }
-    ctx.stroke();
-});
+//             // 只绘制在目标区域内的海岸线
+//             if (lon >= lonMin && lon <= lonMax && lat >= latMin && lat <= latMax) {
+//                 ctx[j ? 'lineTo' : 'moveTo'](
+//                     (lon - lonMin) * canvas.width / (lonMax - lonMin),
+//                     (latMax - lat) * canvas.height / (latMax - latMin));
+//             }
+//         }
+//     }
+//     ctx.stroke();
+// });
 
 function updateWind(name) {
     getJSON('/data/wind_data/wrf_data/' + windFiles[name] + '.json', function (windData) {
