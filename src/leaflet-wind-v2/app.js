@@ -51,33 +51,40 @@ function initMap() {
 
     // 监控地图事件 - 优化拖拽性能
     let isDragging = false;
-    let dragTimeout;
+    let isMoving = false;
 
     map.on('movestart', () => {
         console.log('开始移动');
-        isDragging = true;
-        if (windLayer) {
-            // 降低拖拽时的帧率和粒子数量
-            windLayer.setOptions({
-                frameRate: 24,
-                particleMultiplier: 0.002
+        isMoving = true;
+        // 使用节流函数平滑调整参数
+        if (windLayer && !isDragging) {
+            isDragging = true;
+            requestAnimationFrame(() => {
+                if (windLayer) {
+                    windLayer.setOptions({
+                        frameRate: 60,
+                        particleMultiplier: 0.006,
+                        globalAlpha: 0.9
+                    });
+                }
             });
         }
     });
 
     map.on('moveend', () => {
         console.log('移动结束');
+        isMoving = false;
         isDragging = false;
-        // 延迟恢复正常设置，避免频繁切换
-        clearTimeout(dragTimeout);
-        dragTimeout = setTimeout(() => {
-            if (!isDragging && windLayer) {
+        // 使用节流函数平滑恢复
+        requestAnimationFrame(() => {
+            if (windLayer && !isMoving) {
                 windLayer.setOptions({
                     frameRate: 60,
-                    particleMultiplier: 0.006
+                    particleMultiplier: 0.006,
+                    globalAlpha: 0.9
                 });
             }
-        }, 200);
+        });
     });
 
     map.on('zoomstart', () => {
@@ -103,7 +110,7 @@ function initMap() {
     });
 
     monitorPerformance();
-    
+
     // 添加鼠标坐标显示
     const coordsControl = L.control({ position: 'bottomleft' });
     coordsControl.onAdd = function() {
@@ -113,7 +120,7 @@ function initMap() {
         return div;
     };
     coordsControl.addTo(map);
-    
+
     map.on('mousemove', function(e) {
         const lat = e.latlng.lat.toFixed(4);
         const lng = e.latlng.lng.toFixed(4);
