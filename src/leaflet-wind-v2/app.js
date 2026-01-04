@@ -7,31 +7,117 @@ function initMap() {
         zoom: 6,
         preferCanvas: true,
         renderer: L.canvas(),
-        maxBoundsViscosity: 1.0
+        maxBoundsViscosity: 1.0,
+        zoomAnimation: true,
+        fadeAnimation: false,      // 禁用淡入动画以提高性能
+        markerZoomAnimation: false, // 禁用标记缩放动画
+        inertia: true,
+        worldCopyJump: false,
+        // 添加拖拽优化
+        inertiaDeceleration: 3000,  // 增加惯性减速
+        inertiaMaxSpeed: 1500,      // 限制最大惯性速度
+        zoomSnap: 0.5,              // 缩放步长
+        wheelPxPerZoomLevel: 120    // 鼠标滚轮灵敏度
     });
 
-    // 高德卫星地图
-    L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+    // 高德卫星地图 - 优化缓存和预加载
+    const tileLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
         subdomains: ['1', '2', '3', '4'],
         attribution: '© 高德地图',
-        maxZoom: 18
+        maxZoom: 18,
+        keepBuffer: 4,        // 减少缓存瓦片数量
+        updateWhenZooming: false, // 缩放时不更新
+        updateWhenIdle: true,     // 空闲时更新
+        crossOrigin: true
     }).addTo(map);
 
-    // 性能优化事件
-    let interactionTimeout;
-    map.on('movestart zoomstart', function() {
-        if (windLayer && isWindVisible) {
-            windLayer.setOptions({ frameRate: 24 });
+    // 添加性能监控
+    let frameCount = 0;
+    let lastTime = performance.now();
+
+    function monitorPerformance() {
+        frameCount++;
+        const currentTime = performance.now();
+
+        if (currentTime - lastTime >= 1000) {
+            const fps = Math.round(frameCount * 1000 / (currentTime - lastTime));
+            console.log(`实际FPS: ${fps}, 内存使用: ${(performance.memory?.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB`);
+            frameCount = 0;
+            lastTime = currentTime;
+        }
+
+        requestAnimationFrame(monitorPerformance);
+    }
+
+    // 监控地图事件 - 优化拖拽性能
+    let isDragging = false;
+    let dragTimeout;
+
+    map.on('movestart', () => {
+        console.log('开始移动');
+        isDragging = true;
+        if (windLayer) {
+            // 降低拖拽时的帧率和粒子数量
+            windLayer.setOptions({
+                frameRate: 24,
+                particleMultiplier: 0.002
+            });
         }
     });
 
-    map.on('moveend zoomend', function() {
-        clearTimeout(interactionTimeout);
-        interactionTimeout = setTimeout(() => {
-            if (windLayer && isWindVisible) {
-                windLayer.setOptions({ frameRate: 60 });
+    map.on('moveend', () => {
+        console.log('移动结束');
+        isDragging = false;
+        // 延迟恢复正常设置，避免频繁切换
+        clearTimeout(dragTimeout);
+        dragTimeout = setTimeout(() => {
+            if (!isDragging && windLayer) {
+                windLayer.setOptions({
+                    frameRate: 60,
+                    particleMultiplier: 0.006
+                });
+            }
+        }, 200);
+    });
+
+    map.on('zoomstart', () => {
+        console.log('开始缩放');
+        if (windLayer) {
+            windLayer.setOptions({
+                frameRate: 24,
+                particleMultiplier: 0.001
+            });
+        }
+    });
+
+    map.on('zoomend', () => {
+        console.log('缩放结束');
+        setTimeout(() => {
+            if (windLayer) {
+                windLayer.setOptions({
+                    frameRate: 60,
+                    particleMultiplier: 0.006
+                });
             }
         }, 300);
+    });
+
+    monitorPerformance();
+    
+    // 添加鼠标坐标显示
+    const coordsControl = L.control({ position: 'bottomleft' });
+    coordsControl.onAdd = function() {
+        const div = L.DomUtil.create('div', 'coords-control');
+        div.style.cssText = 'background: rgba(255,255,255,0.9); padding: 5px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 5px;';
+        div.innerHTML = '经度: --, 纬度: --';
+        return div;
+    };
+    coordsControl.addTo(map);
+    
+    map.on('mousemove', function(e) {
+        const lat = e.latlng.lat.toFixed(4);
+        const lng = e.latlng.lng.toFixed(4);
+        document.querySelector('.coords-control').innerHTML = `经度: ${lng}°, 纬度: ${lat}°`;
     });
 }
 
@@ -54,32 +140,49 @@ async function loadWindData() {
             displayOptions: {
                 velocityType: 'Wind',
                 position: 'bottomleft',
-                emptyString: '无数据'
+                emptyString: '无数据',
+                showCardinal: true
             },
             data: velocityData,
             maxVelocity: windData.speedMax,
             velocityScale: 0.01,
-            particleAge: 90,
+            particleAge: 60,
             lineWidth: 1,
-            particleMultiplier: 0.004,
+            particleMultiplier: 3000/500/1000,
             frameRate: 60,
-            colorScale: ['#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#fee08b', '#fdae61', '#f46d43', '#d53e4f']
+            colorScale: ['#3288bd', '#66c2a5', '#abdda4', '#e6f598', '#fee08b', '#fdae61', '#f46d43', '#d53e4f'],
+            minVelocity: 0,
+            maxVelocity: windData.speedMax,
+            globalAlpha: 0.9
         }).addTo(map);
 
-        // 设置地图边界
+        // 设置地图边界和中心点
         const bounds = L.latLngBounds(
             [windData.latMin, windData.lonMin],
             [windData.latMax, windData.lonMax]
         );
 
         map.setMaxBounds(bounds);
-        map.setMinZoom(5);
-        map.setMaxZoom(10);
+        map.setMinZoom(7);
+        map.setMaxZoom(15);
 
-        // 设置地图中心
+        // 动态计算并设置地图中心点
         const centerLat = (windData.latMin + windData.latMax) / 2;
         const centerLon = (windData.lonMin + windData.lonMax) / 2;
         map.setView([centerLat, centerLon], 6);
+
+        // 监听缩放事件，只在缩小超出边界时限制
+        map.off('zoomend');
+        let lastZoom = map.getZoom();
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            const currentBounds = map.getBounds();
+
+            if (currentZoom < lastZoom && !bounds.contains(currentBounds)) {
+                map.fitBounds(bounds);
+            }
+            lastZoom = currentZoom;
+        });
 
         map.fitBounds(bounds, { padding: [10, 10] });
 
@@ -244,30 +347,33 @@ function setupControls() {
 
     // 粒子数量
     document.getElementById('particleSlider').addEventListener('input', function() {
-        document.getElementById('particleCount').textContent = this.value;
+        const value = this.value;
+        document.getElementById('particleCount').textContent = value;
         if (windLayer) {
-            const multiplier = this.value / 1000000; // 简化计算
+            // 根据滑块值计算粒子倍数
+            const multiplier = value / 1000000; // 2000 -> 0.002
             windLayer.setOptions({ particleMultiplier: multiplier });
         }
     });
 
     // 速度倍数
     document.getElementById('speedSlider').addEventListener('input', function() {
-        document.getElementById('speedFactor').textContent = this.value;
+        const value = parseFloat(this.value);
+        document.getElementById('speedFactor').textContent = value.toFixed(1);
         if (windLayer) {
-            windLayer.setOptions({ velocityScale: parseFloat(this.value) * 0.005 });
+            windLayer.setOptions({ velocityScale: 0.01 * value });
         }
     });
 
-    // 切换显示
+    // 风场显示/隐藏
     document.getElementById('toggleWind').addEventListener('click', function() {
         if (windLayer) {
             if (isWindVisible) {
                 map.removeLayer(windLayer);
-                this.textContent = '🙉 显示风场';
+                this.textContent = '👀 显示风场';
                 isWindVisible = false;
             } else {
-                windLayer.addTo(map);
+                map.addLayer(windLayer);
                 this.textContent = '🙈 隐藏风场';
                 isWindVisible = true;
             }
@@ -275,9 +381,12 @@ function setupControls() {
     });
 }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', function() {
+// 初始化应用
+function init() {
     initMap();
     setupControls();
     loadWindData();
-});
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', init);
