@@ -34,6 +34,22 @@ function initMap() {
             }
         }, 300);
     });
+
+    // 添加鼠标坐标显示
+    const coordsControl = L.control({ position: 'bottomleft' });
+    coordsControl.onAdd = function() {
+        const div = L.DomUtil.create('div', 'coords-control');
+        div.style.cssText = 'background: rgba(255,255,255,0.9); padding: 5px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 5px;';
+        div.innerHTML = '经度: --, 纬度: --';
+        return div;
+    };
+    coordsControl.addTo(map);
+
+    map.on('mousemove', function(e) {
+        const lat = e.latlng.lat.toFixed(4);
+        const lng = e.latlng.lng.toFixed(4);
+        document.querySelector('.coords-control').innerHTML = `经度: ${lng}°, 纬度: ${lat}°`;
+    });
 }
 
 // 加载可用时间列表
@@ -101,7 +117,7 @@ async function loadWindData(timeCode) {
             [metadata.latitude[0], metadata.longitude[0]], // 西南角
             [metadata.latitude[1], metadata.longitude[1]]  // 东北角
         );
-        
+
         // 计算数据中心点
         const centerLat = (metadata.latitude[0] + metadata.latitude[1]) / 2;
         const centerLon = (metadata.longitude[0] + metadata.longitude[1]) / 2;
