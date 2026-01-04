@@ -75,14 +75,16 @@ async function loadWindData(timeCode) {
             displayOptions: {
                 velocityType: 'Wind',
                 position: 'bottomleft',
-                emptyString: '无数据'
+                emptyString: '无数据',
+                displayEmptyString: '无风',
+                showCardinal: true
             },
             data: velocityData,
             maxVelocity: metadata.speedMax,
             velocityScale: 0.005,
             particleAge: 60,
             lineWidth: 1,
-            particleMultiplier: 1/500,
+            particleMultiplier: 3000/500/1000,
             frameRate: 60,
             colorScale: ['#3288bd',
                 '#66c2a5',
@@ -99,6 +101,11 @@ async function loadWindData(timeCode) {
             [metadata.latitude[0], metadata.longitude[0]], // 西南角
             [metadata.latitude[1], metadata.longitude[1]]  // 东北角
         );
+        
+        // 计算数据中心点
+        const centerLat = (metadata.latitude[0] + metadata.latitude[1]) / 2;
+        const centerLon = (metadata.longitude[0] + metadata.longitude[1]) / 2;
+        map.setView([centerLat, centerLon], 6);
 
         console.log('数据边界:', JSON.stringify(dataBounds))
         // 设置严格边界，不允许超出数据范围
@@ -108,13 +115,20 @@ async function loadWindData(timeCode) {
         map.setMinZoom(5);
         map.setMaxZoom(10);
 
-        // 监听缩放事件，防止超出边界
+        // 监听缩放事件，只在缩小超出边界时限制
         map.off('zoomend');
+        let lastZoom = map.getZoom();
         map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
             const currentBounds = map.getBounds();
-            if (!dataBounds.contains(currentBounds)) {
+            console.log('当前边界:', JSON.stringify(currentZoom))
+            console.log('数据边界:', JSON.stringify(currentBounds))
+
+            // 只在缩小且超出边界时才调整
+            if (currentZoom < lastZoom && !dataBounds.contains(currentBounds)) {
                 map.fitBounds(dataBounds);
             }
+            lastZoom = currentZoom;
         });
 
         // 调整视图到数据边界
@@ -207,6 +221,13 @@ function updateDataInfo(metadata) {
 
 // 设置控制面板
 function setupControls() {
+    // 控制面板切换
+    document.getElementById('controlToggle').addEventListener('click', function() {
+        const panel = document.getElementById('controlPanel');
+        panel.classList.toggle('collapsed');
+        this.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+    });
+
     // 时间选择
     document.getElementById('timeSelect').addEventListener('change', function() {
         if (this.value) loadWindData(this.value);
